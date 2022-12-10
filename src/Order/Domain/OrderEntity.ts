@@ -1,7 +1,7 @@
-import { OrderCreatedDomainEvent } from '../../Order/Domain/OrderCreatedDomainEvent';
-import { OrderCustomer } from '../../Order/Domain/OrderCustomer';
-import { OrderProductEntity } from '../../Order/Domain/OrderProductEntity';
-import { OrderTimestamp } from '../../Order/Domain/OrderTimestamp';
+import { OrderCreatedDomainEvent } from './Events/OrderCreatedDomainEvent';
+import { OrderCustomer } from './Entities/OrderCustomer';
+import { OrderProductEntity } from './Entities/OrderProductEntity';
+import { OrderTimestamp } from './ValueObjects/OrderTimestamp';
 import { OrderVisitor } from '../../Order/Domain/OrderVisitor';
 import { AggregateRoot } from '../../Shared/AggregateRoot';
 import { Visitable } from '../../Shared/Visitable';
@@ -16,12 +16,12 @@ const generateUuid = () => {
 
 export class OrderEntity
   extends AggregateRoot
-  implements Visitable<OrderVisitor>
+  implements Visitable<OrderVisitor<any>>
 {
   public id: any;
   public paymentType: any;
   public status: any;
-  public products: any;
+  public products: Map<string, OrderProductEntity>;
   public customer: OrderCustomer;
   public timestamp: OrderTimestamp;
 
@@ -35,9 +35,7 @@ export class OrderEntity
     this.timestamp = timestamp;
   }
 
-  public accept<TypeResponse>(
-    visitor: OrderVisitor<TypeResponse>
-  ): TypeResponse {
+  public accept<T>(visitor: OrderVisitor<T>): T {
     return visitor.visit(this);
   }
 
@@ -45,7 +43,6 @@ export class OrderEntity
     id,
     paymentType,
     status,
-    products,
     address,
     phone,
     userId,
@@ -56,7 +53,7 @@ export class OrderEntity
       id,
       paymentType,
       status,
-      products,
+      new Map<string, OrderProductEntity>(),
       new OrderCustomer(userId, address, phone),
       new OrderTimestamp(createdAt, updatedAt)
     );
@@ -66,8 +63,21 @@ export class OrderEntity
 
   public addProduct(product: { name: string; price: string }) {
     const _product = OrderProductEntity.create(product.name, product.name);
-    this.products = [...this.products, _product];
+    this.products.set(_product.name, _product);
     this.recordMany(_product.pullDomainEvents());
+  }
+
+  public removeProduct(productName: string) {
+    this.products.delete(productName);
+  }
+
+  public getProductNames(): string[] {
+    return Array.from(this.products.keys());
+  }
+
+  public changeProductName(productName: string, newProductName: string) {
+    const product = this.products.get(productName);
+    product.changeName(newProductName)
   }
 
   public toPrimitives() {

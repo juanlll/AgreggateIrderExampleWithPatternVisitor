@@ -1,7 +1,7 @@
-import { AddOrderProductsVisitor } from './src/Order/Domain/AddOrderProductsVisitor';
-import { GetTotalOrderProductsVisitor } from './src/Order/Domain/GetTotalOrderProductsVisitor';
+import { AddOrderProductsVisitor } from './src/Order/Domain/Visitors/AddOrderProductsVisitor';
+import { GetTotalOrderProductsVisitor } from './src/Order/Domain/Visitors/GetTotalOrderProductsVisitor';
 import { OrderEntity } from './src/Order/Domain/OrderEntity';
-
+import { PlaceOrderUseCase } from './src/Order/Application/PlaceOrderUseCase';
 const generateUuid = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     let r = (Math.random() * 16) | 0;
@@ -10,45 +10,29 @@ const generateUuid = () => {
   });
 };
 
-//peticion http orden
-// createOrderUseCase(dataOrder)
+const total = new PlaceOrderUseCase(new GetTotalOrderProductsVisitor()).__invoke({
+  id: generateUuid(),
+  paymentType: 'VISA',
+  status: 'ACTIVE',
+  address: 'carrera 123w',
+  phone: '+573422313323',
+  products: generateProducts(10),
+  userId: 'baafbc00-99bf-4dd5-937c-8e025c39b835',
+  createdAt: new Date().toISOString()
+});
 
-// hace la creacion de la orden => ordern crea los productos
-const orderEntity: OrderEntity = OrderEntity.create(
-  generateUuid(),
-  'ECARD',
-  'ACTIVE',
-  [],
-  'carrera 123w',
-  '+573422313323',
-  'baafbc00-99bf-4dd5-937c-8e025c39b835',
-  new Date().toDateString(),
-  null
-);
+console.log(total)
 
-let productos = [];
-for (let i = 0; i <= 3; i++) {
-  productos = [
-    ...productos,
-    {
-      name: 'producto #' + i,
-      price: i + '000',
-    },
-  ];
+function generateProducts(num: number) {
+  let products = [];
+  for (let i = 0; i < num; i++) {
+    products = [
+      ...products,
+      {
+        name: 'producto #' + i,
+        price: i + '000',
+      },
+    ];
+  }
+  return products;
 }
-const getTotalOrderProductsVisitor = new GetTotalOrderProductsVisitor();
-
-console.log(
-  'TotalProductos:',
-  orderEntity.accept<number>(getTotalOrderProductsVisitor)
-);
-
-const addOrderProductsVisitor = new AddOrderProductsVisitor(productos);
-orderEntity.accept<void>(addOrderProductsVisitor);
-
-console.log(
-  'TotalProductos:',
-  orderEntity.accept<number>(getTotalOrderProductsVisitor)
-);
-
-console.log('EventosDeDominio:', orderEntity.pullDomainEvents());
